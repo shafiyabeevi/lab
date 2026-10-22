@@ -1,0 +1,66 @@
+
+<!DOCTYPE html>
+<html>
+<body>
+
+<h2>Weather and Air Quality</h2>
+
+<input type="text" id="city" placeholder="Enter city name">
+
+<select id="type">
+    <option value="weather">Weather</option>
+    <option value="aqi">Air Quality Index</option>
+</select>
+
+<button onclick="search()">Search</button>
+
+<p id="result"></p>
+
+<script>
+function search() {
+    let city = document.getElementById("city").value;
+    let type = document.getElementById("type").value;
+
+    fetch("https://geocoding-api.open-meteo.com/v1/search?name=" + encodeURIComponent(city) + "&count=1")
+    .then(response => response.json())
+    .then(data => {
+        if (!data.results) {
+            document.getElementById("result").innerHTML = "City not found";
+            return;
+        }
+
+        let lat = data.results[0].latitude;
+        let lon = data.results[0].longitude;
+        let name = data.results[0].name;
+
+        let url = "";
+
+        if (type == "weather") {
+            url = "https://api.open-meteo.com/v1/forecast?latitude=" + lat + "&longitude=" + lon + "&current=temperature_2m";
+        } else {
+            url = "https://air-quality-api.open-meteo.com/v1/air-quality?latitude=" + lat + "&longitude=" + lon + "&current=us_aqi";
+        }
+
+        fetch(url)
+        .then(response => response.json())
+        .then(result => {
+            if (type == "weather") {
+                document.getElementById("result").innerHTML =
+                    "City: " + name +
+                    "<br>Temperature: " +
+                    result.current.temperature_2m + " °C";
+            } else {
+                document.getElementById("result").innerHTML =
+                    "City: " + name +
+                    "<br>AQI: " + result.current.us_aqi;
+            }
+        });
+    })
+    .catch(error => {
+        document.getElementById("result").innerHTML = "Error fetching data";
+    });
+}
+</script>
+
+</body>
+</html>

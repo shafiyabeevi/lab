@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en" ng-app="myApp">
+<head>
+    <title>Student Registration</title>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+</head>
+
+<body ng-controller="mainCtrl">
+
+    <h2>Student Registration</h2>
+
+    <div ng-if="!user">
+        <h3>Login / Register</h3>
+
+        <input type="email" ng-model="email" placeholder="Email">
+        <input type="password" ng-model="password" placeholder="Password">
+
+        <button ng-click="register()">Register</button>
+        <button ng-click="login()">Login</button>
+
+        <p>OR</p>
+
+        <button ng-click="googleLogin()">Continue with Google</button>
+    </div>
+
+    <div ng-if="user">
+        <p>Logged in as: {{user.email}}</p>
+
+        <form ng-submit="saveStudent()">
+            <label>Name:</label>
+            <input type="text" ng-model="student.name" required>
+            <br><br>
+
+            <label>Age:</label>
+            <input type="number" ng-model="student.age" required>
+            <br><br>
+
+            <label>Phone Number:</label>
+            <input type="tel" ng-model="student.phone"
+                   pattern="[0-9]{10}" maxlength="10" required>
+            <br><br>
+
+            <button type="submit">Save Student</button>
+        </form>
+
+        <button ng-click="logout()">Logout</button>
+    </div>
+
+    <p>{{message}}</p>
+
+    <script>
+       const firebaseConfig = {
+  apiKey: "AIzaSyDfnFeHG4ZVk8xqK1WZ0daMGC68hJ29V00",
+  authDomain: "testfirebase-90283.firebaseapp.com",
+  projectId: "testfirebase-90283",
+  storageBucket: "testfirebase-90283.firebasestorage.app",
+  messagingSenderId: "140569307907",
+  appId: "1:140569307907:web:a8507f07e42875c5c89736"
+};
+
+        firebase.initializeApp(firebaseConfig);
+
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        const provider = new firebase.auth.GoogleAuthProvider();
+
+        const app = angular.module("myApp", []);
+
+        app.controller("mainCtrl", function($scope) {
+            $scope.user = null;
+            $scope.student = {};
+            $scope.message = "";
+
+            auth.onAuthStateChanged(function(user) {
+                $scope.$applyAsync(function() {
+                    $scope.user = user;
+                });
+            });
+
+            $scope.register = function() {
+                auth.createUserWithEmailAndPassword(
+                    $scope.email, $scope.password
+                ).catch(function(error) {
+                    $scope.$applyAsync(function() {
+                        $scope.message = error.message;
+                    });
+                });
+            };
+
+            $scope.login = function() {
+                auth.signInWithEmailAndPassword(
+                    $scope.email, $scope.password
+                ).catch(function(error) {
+                    $scope.$applyAsync(function() {
+                        $scope.message = error.message;
+                    });
+                });
+            };
+
+            $scope.googleLogin = function() {
+                auth.signInWithPopup(provider)
+                    .catch(function(error) {
+                        $scope.$applyAsync(function() {
+                            $scope.message = error.message;
+                        });
+                    });
+            };
+
+            $scope.saveStudent = function() {
+                db.collection("students").add({
+                    name: $scope.student.name,
+                    age: Number($scope.student.age),
+                    phone: $scope.student.phone,
+                    userId: $scope.user.uid,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                }).then(function() {
+                    $scope.$applyAsync(function() {
+                        $scope.message = "Student saved successfully!";
+                        $scope.student = {};
+                    });
+                }).catch(function(error) {
+                    $scope.$applyAsync(function() {
+                        $scope.message = error.message;
+                    });
+                });
+            };
+
+            $scope.logout = function() {
+                auth.signOut();
+            };
+        });
+    </script>
+
+</body>
+</html>

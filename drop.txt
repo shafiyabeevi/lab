@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>File Form</title>
+</head>
+<body>
+
+<h2>File Form</h2>
+
+<form id="uploadForm">
+    Name:
+    <input type="text" id="name" required>
+    <br><br>
+
+    Choose File:
+    <input type="file" id="file" required>
+    <br><br>
+
+    <button type="submit">Upload</button>
+</form>
+
+<br>
+
+<button type="button" onclick="loadFiles()">Show Files</button>
+
+<ul id="fileList"></ul>
+<p id="message"></p>
+
+<script>
+const ACCESS_TOKEN = "sl.u.AG12NJ7CWid_Up6_yWi0B2NAQSX69yZhLRB3mNuOGMYfHaaMV7G8onaaXfGbP3Mwb9_zfagOAkc0HNl92Q-Xtwjisyu91l5HGy9n1ZoNjKAVoEXkxLf7Loo0AxVTd--QDcwXEmBn-EjGHcPIK9juYCarepNJDunH2ZwLJgxJ9TDnt5PWQVpbzg1nkNfCbbq21bVpYzIQcgUuiDKN6CtSOM6x51X7fi_3XsgLHBSJkwURVy0culcv7OtnE_fO5NMYQo3dZVy6fJz3kC15eymeif8VWK7LDdFKKUpjvQgjshSpQ55H-kcDcMNyB4bOtagVHyHcsHu8-h004ef0cFa3MmkFmwoA_O1oG9kQJUrYuvAgdMaEF4dghV9xdCZd0BDUp5HfagQ48PrO3iuVfvX4FCBt0-vD5hHmkOwG-NQZItM715I7zpTYso2HYFK4K4SQ2dL4Ui-egoem1QTdxz1Sn7reFlScPCEsrJffDjexMnle8pBZVqpNJgheYKFCsrDf7U-atlPqD5_uXi-y_3ahiYuGmExV0XfxKeM9WOsSZLh5NQdoh2tdcyONIT2uDBPctkJkD849KErx6yhmiRSWjTdYJFXb81RuBXHHM3taTXkWgPTVx2Ofas3pv-HzOgZtxiuHwbS9Dc77SeQQbO_2ImPvjqC0n0pAmcHLNuqTsYDes5PAH2Ek3DwXQQ7v-Kp43Tv_-F1apycnYtwgB0R7urznb95cbq6dyv-9h9V-ucpQGX0u8P-akzrd1WFpgHkRH75u0BvbZ1vxQ6G5SwWOeKNEyMhkNnPZaz0jtvkmU_8BQuvxPCRPY9CAKwOIHR414-ctEtCiZEQdMIRD5tcGb0XheqVWCLK12NLTpsR2Vf6MMA2WnK3ZxW9pvHw-awSd8mOETKDiYFQY5mLqRHR_ljSZPHtfgUVEgsnbVQoKZxvo7IA2Qd82djBdN-DNe3-Kub73MhohCOa_sWl7c160d-IwATdwHb0jENGUrOO73XQnHYysO0areU2Jfe8zX8vkAEJ5XgJ8Lxn4GlQcpaxw4KfrJ-kpAkvQzGg39FWcR66e7i8c17U6ocx-zESuUuacanghMTznmUMN36QtIAYZuKxcm4Q5x59IKgcI0zTw9VbEpp2AVlcwoSpmmiJofvAbCKywqgH8ivQ8D09ymXZH7RL92uv34CeBS3IW7GHxsNhoJg-g5qLV-XtSemViSM-ZxEFucrIL3bJO1sigPThVYPf2VdtV0uNedttXycarvJhzB53ask7tBFs6yhzks6DC49cXZd96048_CS_85lAz6wh0eDiWUedQyX-c8KT6FJjgoStp8A0dGSt1TzpplKVP2uKCJEsWo9woszhV1iUUKDGWbkhRr_E1IOnwl_UAKQ_Pijkb1nQa4hHxswYxvgW814DV6iRpAUlu7j1JqNoVp_VsDeiUE-Mez-uQ0VjEqAFSABh-tuDnHXELi3wXQcIsoY8";
+
+async function request(url, options = {}) {
+    const response = await fetch(url, {
+        ...options,
+        headers: {
+            "Authorization": "Bearer " + ACCESS_TOKEN,
+            ...options.headers
+        }
+    });
+
+    if (!response.ok) {
+        const error = await response.text();
+        throw new Error(error);
+    }
+
+    return response;
+}
+
+document.getElementById("uploadForm")
+.addEventListener("submit", async function(e) {
+    e.preventDefault();
+
+    const name = document.getElementById("name").value.trim();
+    const file = document.getElementById("file").files[0];
+    const message = document.getElementById("message");
+
+    try {
+        message.textContent = "Uploading...";
+
+        const path = "/" + name.replace(/[\\/]/g, "_")
+                     + "_" + file.name.replace(/[\\/]/g, "_");
+
+        await request(
+            "https://content.dropboxapi.com/2/files/upload",
+            {
+                method: "POST",
+                headers: {
+                    "Dropbox-API-Arg": JSON.stringify({
+                        path: path,
+                        mode: "add",
+                        autorename: true
+                    }),
+                    "Content-Type": "application/octet-stream"
+                },
+                body: file
+            }
+        );
+
+        message.textContent = "Upload successful!";
+        await loadFiles();
+
+    } catch (error) {
+        message.textContent = "Upload error: " + error.message;
+    }
+});
+
+async function loadFiles() {
+    const list = document.getElementById("fileList");
+    const message = document.getElementById("message");
+
+    list.innerHTML = "";
+    message.textContent = "Loading...";
+
+    try {
+        const response = await request(
+            "https://api.dropboxapi.com/2/files/list_folder",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    path: "",
+                    recursive: false
+                })
+            }
+        );
+
+        const data = await response.json();
+        const files = data.entries.filter(
+            f => f[".tag"] === "file"
+        );
+
+        if (files.length === 0) {
+            message.textContent = "No files found.";
+            return;
+        }
+
+        files.forEach(function(f) {
+            const li = document.createElement("li");
+            li.appendChild(document.createTextNode(f.name + " "));
+
+            const button = document.createElement("button");
+            button.textContent = "Download";
+
+            button.onclick = function() {
+                downloadFile(f.path_lower);
+            };
+
+            li.appendChild(button);
+            list.appendChild(li);
+        });
+
+        message.textContent = "Files loaded.";
+
+    } catch (error) {
+        message.textContent = "List error: " + error.message;
+    }
+}
+
+async function downloadFile(path) {
+    const message = document.getElementById("message");
+
+    try {
+        message.textContent = "Downloading...";
+
+        const response = await request(
+            "https://content.dropboxapi.com/2/files/download",
+            {
+                method: "POST",
+                headers: {
+                    "Dropbox-API-Arg": JSON.stringify({
+                        path: path
+                    })
+                }
+            }
+        );
+
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+
+        a.href = url;
+        a.download = path.split("/").pop();
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+        message.textContent = "Download started.";
+
+    } catch (error) {
+        message.textContent = "Download error: " + error.message;
+    }
+}
+</script>
+
+</body>
+</html>

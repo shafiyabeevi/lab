@@ -1,0 +1,169 @@
+sudo apt update
+sudo apt install openjdk-17-jdk -y
+
+cd ~
+wget https://archive.apache.org/dist/hadoop/common/hadoop-3.3.6/hadoop-3.3.6.tar.gz
+tar -xzf hadoop-3.3.6.tar.gz
+
+mv hadoop-3.3.6 Hadoop
+Hadoop version check : ~/hadoop/bin/hadoop version
+
+readlink -f $(which java)
+nano ~/hadoop/etc/hadoop/hadoop-env.sh => export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+
+nano ~/.bashrc => export HADOOP_HOME=$HOME/hadoop
+export PATH=$PATH:$HADOOP_HOME/bin:$HADOOP_HOME/sbin
+export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+
+source ~/.bashrc =>hadoop version
+
+nano ~/hadoop/etc/hadoop/core-site.xml =><configuration>
+    <property>
+        <name>fs.defaultFS</name>
+        <value>hdfs://localhost:9000</value>
+    </property>
+</configuration>   => <configuration>
+    <property>
+        <name>dfs.replication</name>
+        <value>1</value>
+    </property>
+    <property>
+        <name>dfs.namenode.name.dir</name>
+        <value>file:///home/vboxuser/hadoopdata/namenode</value>
+    </property>
+    <property>
+        <name>dfs.datanode.data.dir</name>
+        <value>file:///home/vboxuser/hadoopdata/datanode</value>
+    </property>
+</configuration>
+
+nano ~/hadoop/etc/hadoop/mapred-site.xml=><configuration>
+    <property>
+        <name>mapreduce.framework.name</name>
+        <value>yarn</value>
+    </property>
+</configuration>
+
+nano ~/hadoop/etc/hadoop/yarn-site.xml=><configuration>
+    <property>
+        <name>yarn.nodemanager.aux-services</name>
+        <value>mapreduce_shuffle</value>
+    </property>
+</configuration>
+
+=>sudo apt install openssh-server openssh-client -y
+=>sudo service ssh start
+=>ssh-keygen -t rsa -P "" -f ~/.ssh/id_rsa
+=>cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
+=>ssh localhost
+=>If it asks whether to continue connecting, type:
+yes =>type exit
+
+=>mkdir -p ~/hadoopdata/namenode
+mkdir -p ~/hadoopdata/datanode
+=>hdfs namenode -format
+
+/MapReduce$ hadoop jar /home/vboxuser/hadoop/share/hadoop/tools/lib/hadoop-streaming-3.3.6.jar -files mapper.py,reducer.py -mapper "python3 mapper.py" -reducer "python3 reducer.py" -input /user/vboxuser/input/input.txt -output /user/vboxuser/out
+
+packageJobJar: [/tmp/hadoop-unjar123456789/] [] /tmp/streamjob987654321.jar tmpDir=null
+
+INFO client.DefaultNoHARMFailoverProxyProvider:
+Connecting to ResourceManager at localhost/127.0.0.1:8032
+
+INFO mapreduce.JobResourceUploader:
+Disabling Erasure Coding for path: /tmp/hadoop-yarn/staging/vboxuser/.staging/job_123456789_0001
+
+INFO mapred.FileInputFormat:
+Total input files to process : 1
+
+INFO mapreduce.JobSubmitter:
+number of splits:2
+
+INFO mapreduce.JobSubmitter:
+Submitting tokens for job: job_123456789_0001
+
+INFO impl.YarnClientImpl:
+Submitted application application_123456789_0001
+
+INFO mapreduce.Job:
+The url to track the job:
+http://yes:8088/proxy/application_123456789_0001/
+
+INFO mapreduce.Job:
+Running job: job_123456789_0001
+
+INFO mapreduce.Job:
+Job job_123456789_0001 running in uber mode : false
+
+INFO mapreduce.Job:
+map 0% reduce 0%
+
+INFO mapreduce.Job:
+map 50% reduce 0%
+
+INFO mapreduce.Job:
+map 100% reduce 0%
+
+INFO mapreduce.Job:
+map 100% reduce 50%
+
+INFO mapreduce.Job:
+map 100% reduce 100%
+
+INFO mapreduce.Job:
+Job job_123456789_0001 completed successfully
+
+INFO mapreduce.Job:
+Counters: 30
+
+File System Counters
+    FILE: Number of bytes read=...
+    FILE: Number of bytes written=...
+    HDFS: Number of bytes read=...
+    HDFS: Number of bytes written=...
+
+Map-Reduce Framework
+    Map input records=3
+    Map output records=6
+    Map output bytes=...
+    Map output materialized bytes=...
+    Input split bytes=...
+    Combine input records=0
+    Combine output records=0
+    Reduce input groups=3
+    Reduce shuffle bytes=...
+    Reduce input records=6
+    Reduce output records=3
+    Spilled Records=12
+    Shuffled Maps=2
+    Failed Shuffles=0
+    Merged Map outputs=2
+
+Mapper:
+import sys
+
+for line in sys.stdin:
+    words = line.split()
+
+    for word in words:
+        print(word, 1)
+
+
+Reducer
+import sys
+
+counts = {}
+
+for line in sys.stdin:
+    word, count = line.split()
+    counts[word] = counts.get(word, 0) + int(count)
+
+for word, count in sorted(counts.items()):
+    print(word, count)
+
+input
+hello hadoop
+hello world
+hadoop world
+
+cat input.txt | python3 mapper.py | sort | python3 reducer.py

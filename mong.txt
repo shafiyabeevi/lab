@@ -1,0 +1,148 @@
+
+<!DOCTYPE html>
+<html>
+<body>
+
+<h2>Student Management</h2>
+
+Name:
+<input type="text" id="name">
+
+Age:
+<input type="number" id="age">
+
+<br><br>
+
+<button onclick="insert()">Insert</button>
+<button onclick="display()">Display</button>
+<button onclick="update()">Update</button>
+<button onclick="del()">Delete</button>
+
+<p id="result"></p>
+
+<script>
+function insert() {
+    let name = document.getElementById("name").value;
+    let age = document.getElementById("age").value;
+
+    fetch("http://localhost:3000/students", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            name: name,
+            age: Number(age)
+        })
+    })
+    .then(response => response.text())
+    .then(data => {
+        document.getElementById("result").innerHTML = data;
+    });
+}
+
+function display() {
+    fetch("http://localhost:3000/students")
+    .then(response => response.json())
+    .then(data => {
+        let output = "";
+
+        data.forEach(student => {
+            output += student.name + " - " +
+                      student.age + "<br>";
+        });
+
+        document.getElementById("result").innerHTML = output;
+    });
+}
+
+function update() {
+    let name = document.getElementById("name").value;
+    let age = document.getElementById("age").value;
+
+    fetch("http://localhost:3000/students/" + encodeURIComponent(name), {
+        method: "PUT",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            age: Number(age)
+        })
+    })
+    .then(response => response.text())
+    .then(data => {
+        document.getElementById("result").innerHTML = data;
+    });
+}
+
+function del() {
+    let name = document.getElementById("name").value;
+
+    fetch("http://localhost:3000/students/" + encodeURIComponent(name), {
+        method: "DELETE"
+    })
+    .then(response => response.text())
+    .then(data => {
+        document.getElementById("result").innerHTML = data;
+    });
+}
+</script>
+
+</body>
+</html>
+
+
+const express = require("express");
+const mongoose = require("mongoose");
+const cors = require("cors");
+const dns = require("dns");
+
+dns.setServers(["8.8.8.8", "8.8.4.4"]);
+
+const app = express();
+app.use(express.json());
+app.use(cors());
+
+mongoose.connect("mongodb+srv://sha:1234@cluster0.mpw3uxd.mongodb.net/check")
+.then(() => console.log("MongoDB Connected"))
+.catch(err => console.log(err));
+
+const Student = mongoose.model("Student", {
+    name: String,
+    age: Number
+});
+
+app.post("/students", async (req, res) => {
+    let student = new Student(req.body);
+    await student.save();
+    res.send("Student inserted");
+});
+
+app.get("/students", async (req, res) => {
+    let data = await Student.find();
+    res.json(data);
+});
+
+app.put("/students/:name", async (req, res) => {
+    let data = await Student.findOneAndUpdate(
+        { name: req.params.name },
+        req.body,
+        { new: true }
+    );
+
+    if (data)
+        res.send("Student updated");
+    else
+        res.send("Student not found");
+});
+
+app.delete("/students/:name", async (req, res) => {
+    let data = await Student.findOneAndDelete({
+        name: req.params.name
+    });
+
+    if (data)
+        res.send("Student deleted");
+    else
+        res.send("Student not found");
+});
+
+app.listen(3000, () => {
+    console.log("Server running on port 3000");
+});
