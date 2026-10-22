@@ -1,0 +1,37 @@
+ word count => from mpi4py import MPI
+
+comm = MPI.COMM_WORLD
+rank = comm.Get_rank()
+size = comm.Get_size()
+
+data = ["hi", "hello", "hi", "spark", "hello"]
+
+part = len(data) // size
+start = rank * part
+end = start + part
+
+mypart = data[start:end]
+
+local = {}
+for word in mypart:
+    local[word] = local.get(word, 0) + 1
+
+all_data = comm.gather(local, root=0)
+
+if rank == 0:
+    result = {}
+    for d in all_data:
+        for word, count in d.items():
+            result[word] = result.get(word, 0) + count
+
+    print(result)
+
+spark => val data = Array("hi hello hi spark hello")
+
+val rdd = sc.parallelize(data)
+
+val words = rdd.flatMap(x => x.split(" "))
+
+val result = words.map(x => (x, 1)).reduceByKey(_ + _)
+
+result.filter(x => x._2 > 1).collect().foreach(println)
